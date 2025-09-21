@@ -42,13 +42,14 @@ def insert_canvas_image(canvas, page, pos, size=(60, 30)):
 st.set_page_config(page_title="药品检查签名工具", layout="centered")
 st.title("药品检查签名工具")
 
-# 1. 内置 Markdown 展示
-if os.path.exists(NOTICE_MD):
-    with open(NOTICE_MD, "r", encoding="utf-8") as f:
-        st.markdown("### 📄 检查表")
-        st.markdown(f.read())
-else:
-    st.info("table.md 未找到，已跳过检查表展示。")
+# 检查表按钮
+if st.button("显示检查表"):
+    if os.path.exists(NOTICE_MD):
+        with open(NOTICE_MD, "r", encoding="utf-8") as f:
+            st.markdown("### 📄 检查表")
+            st.markdown(f.read())
+    else:
+        st.info("table.md 未找到，已跳过检查表展示。")
 
 # 2. 科室输入
 st.subheader("科室（病区）名称")
