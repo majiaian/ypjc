@@ -27,11 +27,11 @@ POS_SCORE = (522, 468)
 def safe_filename(name: str):
     return re.sub(r'[^\u4e00-\u9fa5A-Za-z0-9()_\-]', '_', name).strip('_')
 
-def insert_canvas_image(canvas, page, pos, size=(60, 30)):
+def insert_canvas_image(canvas, page, pos, size=(60, 30),quality=75):
     if canvas and canvas.image_data is not None:
         img = Image.fromarray(canvas.image_data.astype("uint8"), mode="RGBA")
         buf = io.BytesIO()
-        img.save(buf, format="PNG")
+        img.save(buf, format="JPEG",quality=quality)
         buf.seek(0)
         x, y = pos
         w, h = size
