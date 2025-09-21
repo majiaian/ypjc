@@ -59,11 +59,11 @@ deduct_reason = st.text_input("请填写扣分理由：", key="deduct")
 # 3. 手写区域
 st.subheader("护士长姓名")
 canvas_sig1 = st_canvas(stroke_width=4, stroke_color="black", background_color="white",
-                        height=90, width=270, drawing_mode="freedraw", key="sig1")
+                        height=120, width=360, drawing_mode="freedraw", key="sig1")
 
 st.subheader("检查人员签名")
 canvas_sig2 = st_canvas(stroke_width=4, stroke_color="black", background_color="white",
-                        height=90, width=270, drawing_mode="freedraw", key="sig2")
+                        height=120, width=360, drawing_mode="freedraw", key="sig2")
 
 st.subheader("得分")
 canvas_score = st_canvas(stroke_width=4, stroke_color="black", background_color="white",
