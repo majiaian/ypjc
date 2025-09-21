@@ -99,7 +99,6 @@ canvas_score = st_canvas(stroke_width=4, stroke_color="black", background_color=
 # 生成 PDF
 DATE_STR = datetime.now().strftime("%Y.%m.%d")
 
-@st.cache_data(show_spinner=False)
 def build_pdf(dept: str):
     if not os.path.exists(SRC):
         st.error("模板文件缺失"); st.stop()
@@ -191,3 +190,4 @@ if len(st.session_state.png_files) >= 2:
         file_name=f"{OUT_PREFIX}_批量_{datetime.now():%Y%m%d_%H%M%S}.zip",
         mime="application/zip"
     )
+
