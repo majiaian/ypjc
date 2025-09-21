@@ -28,7 +28,7 @@ def safe_filename(name: str):
 def insert_canvas_image(canvas, img, pos, size=(60, 30)):
     if canvas and canvas.image_data is not None:
         sig_img = Image.fromarray(canvas.image_data.astype("uint8"), mode="RGBA")
-        sig_img = sig_img.resize(size, Image.ANTIALIAS)
+        sig_img = sig_img.resize(size, Image.Resampling.LANCZOS)  # 替换 Image.ANTIALIAS
         img.paste(sig_img, pos, sig_img)
 
 # --------------------------------------------------
