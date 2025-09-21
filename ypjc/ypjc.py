@@ -65,7 +65,7 @@ st.subheader("检查人员签名")
 canvas_sig2 = st_canvas(stroke_width=4, stroke_color="black", background_color="white",
                         height=90, width=270, drawing_mode="freedraw", key="sig2")
 
-st.subheader("得分及扣分理由")
+st.subheader("得分")
 canvas_score = st_canvas(stroke_width=4, stroke_color="black", background_color="white",
                          height=90, width=270, drawing_mode="freedraw", key="score")
 
