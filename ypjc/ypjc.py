@@ -85,53 +85,48 @@ deduct_reason = st.text_input("请填写扣分理由：", key="deduct")
 # 3. 手写区域
 st.subheader("护士长姓名")
 canvas_sig1 = st_canvas(stroke_width=4, stroke_color="black", background_color="white",
-                        height=90, width=270, drawing_mode="freedraw", key="sig1")
+                        height=120, width=360, drawing_mode="freedraw", key="sig1")
 
 st.subheader("检查人员签名")
 canvas_sig2 = st_canvas(stroke_width=4, stroke_color="black", background_color="white",
-                        height=90, width=270, drawing_mode="freedraw", key="sig2")
+                        height=120, width=360, drawing_mode="freedraw", key="sig2")
 
-st.subheader("得分及扣分理由")
+st.subheader("得分")
 canvas_score = st_canvas(stroke_width=4, stroke_color="black", background_color="white",
                          height=90, width=270, drawing_mode="freedraw", key="score")
 
 # --------------------------------------------------
-# 生成 PDF
-DATE_STR = datetime.now().strftime("%Y.%m.%d")
-
-def build_pdf(dept: str):
+def build_pdf(dept: str, deduct_reason: str, sig1_data, sig2_data, score_data):
     if not os.path.exists(SRC):
         st.error("模板文件缺失"); st.stop()
     doc = fitz.open(SRC)
     if len(doc) < 2:
         st.error("模板页数不足"); st.stop()
     p1, p2 = doc[0], doc[1]
-    # 注册中文字体
+
+    # 注册字体（每页都要）
     if not any("song" in f for f in p1.get_fonts(full=False)):
         if not os.path.exists(FONT_PATH):
             st.error(f"字体文件不存在：{FONT_PATH}"); st.stop()
         p1.insert_font(fontname="song", fontfile=FONT_PATH)
+    if not any("song" in f for f in p2.get_fonts(full=False)):
+        p2.insert_font(fontname="song", fontfile=FONT_PATH)
+
     # 日期
     p1.insert_text((POS_DATE[0], POS_DATE[1]), DATE_STR, fontname="song", fontsize=10)
-
     # 科室
     if dept:
-        if "song" not in [f[3] for f in p1.get_fonts(full=False)]:
-            p1.insert_font(fontname="song", fontfile=FONT_PATH)
         p1.insert_text((POS_DEPT[0], POS_DEPT[1]), dept, fontname="song", fontsize=12)
-    #扣分理由 
+    # 扣分理由
     if deduct_reason:
-        if "song" not in [f[3] for f in p2.get_fonts(full=False)]:
-            p2.insert_font(fontname="song", fontfile=FONT_PATH)
         x, y = POS_SCORE[0], POS_SCORE[1] + 60
-        # 自动换行（宽度 420 pt，行高 18）
         p2.insert_textbox(fitz.Rect(x-100, y, x + 300, y + 80),
                           deduct_reason,
                           fontname="song", fontsize=11, align=0)
-    # 插入图像
-    insert_canvas_image(canvas_sig1, p2, POS_SIG1)
-    insert_canvas_image(canvas_sig2, p2, POS_SIG2)
-    insert_canvas_image(canvas_score, p2, POS_SCORE, size=(100, 50))
+    # 插入签名图
+    insert_canvas_image(sig1_data, p2, POS_SIG1)
+    insert_canvas_image(sig2_data, p2, POS_SIG2)
+    insert_canvas_image(score_data, p2, POS_SCORE, size=(100, 50))
 
     out = io.BytesIO()
     doc.save(out, deflate=True)
@@ -140,14 +135,16 @@ def build_pdf(dept: str):
 
 # --------------------------------------------------
 # 下载管理
-if "pdf_files" not in st.session_state:
-    st.session_state.pdf_files = []
 if "png_files" not in st.session_state:
     st.session_state.png_files = []
 
-# 1. 主按钮：生成 PNG（后台先生成 PDF 再转 PNG）
+# 1. 主按钮：生成 PNG（后台自动生成 PDF→PNG）
 if st.button("生成 PNG 图片"):
-    pdf_bytes = build_pdf(dept_name, deduct_reason, canvas_sig1, canvas_sig2, canvas_score)
+    sig1_data = canvas_sig1.image_data if canvas_sig1 and canvas_sig1.image_data is not None else None
+    sig2_data = canvas_sig2.image_data if canvas_sig2 and canvas_sig2.image_data is not None else None
+    score_data = canvas_score.image_data if canvas_score and canvas_score.image_data is not None else None
+
+    pdf_bytes = build_pdf(dept_name, deduct_reason, sig1_data, sig2_data, score_data)
     png_bytes = pdf_to_png(pdf_bytes)
     safe_dept = safe_filename(dept_name) or "未命名科室"
     png_filename = f"{OUT_PREFIX}_{safe_dept}_{datetime.now():%Y%m%d_%H%M%S}.png"
@@ -159,7 +156,7 @@ if st.session_state.png_files:
     if st.button("✅ 已生成图片，下一科室"):
         st.session_state.dept_name = ""
         st.session_state.deduct_reason = ""
-        # 只重置需要清空的画布
+        # 只换需要清空的画布 key
         st.session_state.sig1_key = str(datetime.now())
         st.session_state.score_key = str(datetime.now())
         st.rerun()
