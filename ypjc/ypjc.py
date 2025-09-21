@@ -29,7 +29,7 @@ def safe_filename(name: str):
 
 def insert_canvas_image(canvas, page, pos, size=(60, 30),quality=75):
     if canvas and canvas.image_data is not None:
-        img = Image.fromarray(canvas.image_data.astype("uint8"), mode="RGBA")
+        img = Image.fromarray(canvas.image_data.astype("uint8"), mode="RGB")
         buf = io.BytesIO()
         img.save(buf, format="JPEG",quality=quality)
         buf.seek(0)
