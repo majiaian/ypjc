@@ -93,26 +93,35 @@ def build_pdf(dept: str, deduct_reason: str, canvas_sig1, canvas_sig2, canvas_sc
     if len(doc) < 2:
         st.error("模板页数不足"); st.stop()
     p1, p2 = doc[0], doc[1]
+    
     # 注册中文字体
     if not any("song" in f for f in p1.get_fonts(full=False)):
         if not os.path.exists(FONT_PATH):
             st.error(f"字体文件不存在：{FONT_PATH}"); st.stop()
-        p1.insert_font(fontname="song", fontfile=FONT_PATH)
+        try:
+            p1.insert_font(fontname="song", fontfile=FONT_PATH)
+        except Exception as e:
+            st.error(f"加载字体文件失败：{e}"); st.stop()
+    
     # 日期
     p1.insert_text((POS_DATE[0], POS_DATE[1]), DATE_STR, fontname="song", fontsize=10)
+    
     # 科室
     if dept:
         p1.insert_text((POS_DEPT[0], POS_DEPT[1]), dept, fontname="song", fontsize=12)
+    
     # 扣分理由
     if deduct_reason:
         x, y = POS_SCORE[0], POS_SCORE[1] + 60
         p2.insert_textbox(fitz.Rect(x-100, y, x + 300, y + 80),
                           deduct_reason,
                           fontname="song", fontsize=11, align=0)
+    
     # 插入图像
     insert_canvas_image(canvas_sig1, p2, POS_SIG1)
     insert_canvas_image(canvas_sig2, p2, POS_SIG2)
     insert_canvas_image(canvas_score, p2, POS_SCORE, size=(100, 50))
+    
     out = io.BytesIO()
     doc.save(out, deflate=True, garbage=4)
     out.seek(0)
@@ -122,29 +131,27 @@ def build_pdf(dept: str, deduct_reason: str, canvas_sig1, canvas_sig2, canvas_sc
 # 下载管理
 if "pdf_files" not in st.session_state:
     st.session_state.pdf_files = []
+if "png_files" not in st.session_state:
+    st.session_state.png_files = []
 
 if st.button("生成 PDF"):
     pdf_bytes = build_pdf(dept_name, deduct_reason, canvas_sig1, canvas_sig2, canvas_score)
     safe_dept = safe_filename(dept_name) or "未命名科室"
-    filename = f"{OUT_PREFIX}_{safe_dept}_{datetime.now():%Y%m%d_%H%M%S}.pdf"
-    st.session_state.pdf_files.append((filename, pdf_bytes.getvalue()))
-    st.success(f"已生成：{filename}")
-    if st.button("✅ 继续签名，下一科室"):
-        # 只清空科室输入框，其余保留
-        st.session_state.dept_key = str(datetime.now())   # 换 key 强制重置
-        st.rerun()
+    pdf_filename = f"{OUT_PREFIX}_{safe_dept}_{datetime.now():%Y%m%d_%H%M%S}.pdf"
+    st.session_state.pdf_files.append((pdf_filename, pdf_bytes.getvalue()))
+    st.success(f"已生成：{pdf_filename}")
 
-# 4. 单文件下载（最近一个）
+# 4. 单文件下载（最近一个 PDF）
 if st.session_state.pdf_files:
-    latest_name, latest_data = st.session_state.pdf_files[-1]
+    latest_pdf_name, latest_pdf_data = st.session_state.pdf_files[-1]
     st.download_button(
         label="📄 下载当前 PDF",
-        data=latest_data,
-        file_name=latest_name,
+        data=latest_pdf_data,
+        file_name=latest_pdf_name,
         mime="application/pdf"
     )
     st.warning("⚠️ 如需多次生成后统一打包，请保持本网页开启，不要刷新或点击rerun")
-# 5. 打包下载全部
+# 5. 打包下载全部 PDF
     if len(st.session_state.pdf_files) > 1:
         zip_buf = io.BytesIO()
         with zipfile.ZipFile(zip_buf, "w") as zf:
@@ -161,13 +168,25 @@ if st.session_state.pdf_files:
 # --------------------------------------------------
 # 生成 PNG 图片
 if st.button("生成 PNG 图片"):
-    pdf_bytes = build_pdf(dept_name, deduct_reason, canvas_sig1, canvas_sig2, canvas_score)
-    png_bytes = pdf_to_png(pdf_bytes.getvalue())
-    safe_dept = safe_filename(dept_name) or "未命名科室"
-    filename = f"{OUT_PREFIX}_{safe_dept}_{datetime.now():%Y%m%d_%H%M%S}.png"
+    if not st.session_state.pdf_files:
+        st.error("请先生成 PDF 文件")
+    else:
+        for pdf_filename, pdf_bytes in st.session_state.pdf_files:
+            png_bytes = pdf_to_png(pdf_bytes)
+            png_filename = pdf_filename.replace(".pdf", ".png")
+            st.session_state.png_files.append((png_filename, png_bytes.getvalue()))
+        st.success("所有 PDF 已转换为 PNG 图片")
+
+# 6. 打包下载全部 PNG 图片
+if st.session_state.png_files:
+    zip_buf = io.BytesIO()
+    with zipfile.ZipFile(zip_buf, "w") as zf:
+        for name, data in st.session_state.png_files:
+            zf.writestr(name, data)
+    zip_buf.seek(0)
     st.download_button(
-        label="🖼️ 下载当前 PNG 图片",
-        data=png_bytes,
-        file_name=filename,
-        mime="image/png"
+        label="🖼️ 打包下载全部 PNG 图片",
+        data=zip_buf,
+        file_name=f"{OUT_PREFIX}_批量_{datetime.now():%Y%m%d_%H%M%S}.zip",
+        mime="application/zip"
     )
