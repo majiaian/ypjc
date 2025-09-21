@@ -101,7 +101,7 @@ canvas_score = st_canvas(stroke_width=4, stroke_color="black", background_color=
 DATE_STR = datetime.now().strftime("%Y.%m.%d")
 
 @st.cache_data(show_spinner=False)
-def build_pdf(dept: str):
+def build_pdf(dept: str, reason: str = ""):
     if not os.path.exists(SRC):
         st.error("模板文件缺失"); st.stop()
     doc = fitz.open(SRC)
@@ -125,7 +125,7 @@ def build_pdf(dept: str):
             p1.insert_font(fontname="song", fontfile=FONT_PATH)
         p1.insert_text((POS_DEPT[0], POS_DEPT[1]), dept, fontname="song", fontsize=12)
     #扣分理由 
-    if deduct_reason:
+    if reason:
         if "song" not in [f[3] for f in p2.get_fonts(full=False)]:
             p2.insert_font(fontname="song", fontfile=FONT_PATH)
         x, y = POS_SCORE[0], POS_SCORE[1] + 60
@@ -136,7 +136,7 @@ def build_pdf(dept: str):
     # 插入图像
     insert_canvas_image(canvas_sig1, p2, POS_SIG1)
     insert_canvas_image(canvas_sig2, p2, POS_SIG2)
-    insert_canvas_image(canvas_score, p2, POS_SCORE, size=(100, 50))
+    insert_canvas_image(canvas_score, p2, POS_SCORE)
 
     out = io.BytesIO()
     doc.save(out, deflate=True)
@@ -151,7 +151,7 @@ if st.button("生成图片"):
         st.stop()
 
     # 1. 先生成 PDF（内存中）
-    pdf_bytes = build_pdf(dept_name)          # 复用原来的函数
+    pdf_bytes = build_pdf(dept_name, deduct_reason)          # 复用原来的函数
     # 2. 立即转 PNG
     png_bytes = pdf_to_png(pdf_bytes.getvalue())
 
@@ -166,3 +166,4 @@ if st.button("生成图片"):
         file_name=png_name,
         mime="image/png"
     )
+
