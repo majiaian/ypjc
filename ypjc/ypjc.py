@@ -69,12 +69,12 @@ st.set_page_config(page_title="药品检查签名工具", layout="centered")
 st.title("药品检查签名工具")
 
 # 1. 内置 Markdown 展示
-if os.path.exists(NOTICE_MD):
-    with open(NOTICE_MD, "r", encoding="utf-8") as f:
-        st.markdown("### 📄 检查表")
-        st.markdown(f.read())
-else:
-    st.info("table.md 未找到，已跳过检查表展示。")
+if st.button("📄 显示检查表"):
+    if os.path.exists(NOTICE_MD):
+        with open(NOTICE_MD, "r", encoding="utf-8") as f:
+            st.markdown(f.read())
+    else:
+        st.info("table.md 未找到，已跳过检查表展示。")
 
 # 2. 科室输入
 st.subheader("科室（病区）名称")
@@ -143,56 +143,30 @@ def build_pdf(dept: str):
 # 下载管理
 if "pdf_files" not in st.session_state:
     st.session_state.pdf_files = []
-if "png_files" not in st.session_state:   # 防报错
+if "png_files" not in st.session_state:
     st.session_state.png_files = []
 
-if st.button("生成 PDF"):
-    pdf_bytes = build_pdf(dept_name)
-    safe_dept = safe_filename(dept_name) or "未命名科室"
-    filename = f"{OUT_PREFIX}_{safe_dept}_{datetime.now():%Y%m%d_%H%M%S}.pdf"
-    st.session_state.pdf_files.append((filename, pdf_bytes.getvalue()))
-    st.success(f"已生成：{filename}")
-    if st.button("✅ 继续签名，下一科室"):
-            # 只清空科室输入框，其余保留
-            st.session_state.dept_key = str(datetime.now())   # 换 key 强制重置
-            st.rerun()
-# 4. 单文件下载（最近一个）
-if st.session_state.pdf_files:
-    latest_name, latest_data = st.session_state.pdf_files[-1]
-    st.download_button(
-        label="📄 下载当前PDF",
-        data=latest_data,
-        file_name=latest_name,
-        mime="application/pdf"
-    )
-    st.warning("⚠️ 如需多次生成后统一打包，请保持本网页开启，不要刷新或点击rerun")
-# 5. 打包下载全部
-    if len(st.session_state.pdf_files) > 1:
-        zip_buf = io.BytesIO()
-        with zipfile.ZipFile(zip_buf, "w") as zf:
-            for name, data in st.session_state.pdf_files:
-                zf.writestr(name, data)
-        zip_buf.seek(0)
-        st.download_button(
-            label="📦 打包下载全部 PDF",
-            data=zip_buf,
-            file_name=f"{OUT_PREFIX}_批量_{datetime.now():%Y%m%d_%H%M%S}.zip",
-            mime="application/zip"
-        )
-
-# 生成 PNG 图片
+# 1. 主按钮：生成 PNG（后台先生成 PDF 再转 PNG）
 if st.button("生成 PNG 图片"):
-    if not st.session_state.pdf_files:
-        st.error("请先生成 PDF 文件")
-    else:
-        for pdf_filename, pdf_bytes in st.session_state.pdf_files:
-            png_bytes = pdf_to_png(pdf_bytes)
-            png_filename = pdf_filename.replace(".pdf", ".png")
-            st.session_state.png_files.append((png_filename, png_bytes.getvalue()))
-        st.success("所有 PDF 已转换为 PNG 图片")
+    pdf_bytes = build_pdf(dept_name, deduct_reason, canvas_sig1, canvas_sig2, canvas_score)
+    png_bytes = pdf_to_png(pdf_bytes)
+    safe_dept = safe_filename(dept_name) or "未命名科室"
+    png_filename = f"{OUT_PREFIX}_{safe_dept}_{datetime.now():%Y%m%d_%H%M%S}.png"
+    st.session_state.png_files.append((png_filename, png_bytes.getvalue()))
+    st.success(f"已生成：{png_filename}")
 
-# 6. 逐个下载 PNG 图片
-if st.session_state.get("png_files"):
+# 2. 下一科室：清空除 sig2 外的所有输入 & 签名
+if st.session_state.png_files:
+    if st.button("✅ 已生成图片，下一科室"):
+        st.session_state.dept_name = ""
+        st.session_state.deduct_reason = ""
+        # 只重置需要清空的画布
+        st.session_state.sig1_key = str(datetime.now())
+        st.session_state.score_key = str(datetime.now())
+        st.rerun()
+
+# 3. 逐个下载（始终显示）
+if st.session_state.png_files:
     st.markdown("---")
     st.write("📎 点击单独下载每张图片：")
     for name, data in st.session_state.png_files:
@@ -201,8 +175,19 @@ if st.session_state.get("png_files"):
             data=data,
             file_name=name,
             mime="image/png",
-            key=name  # 避免重复 key
+            key=name
         )
 
-
-
+# 4. 批量下载（≥2 张时出现）
+if len(st.session_state.png_files) >= 2:
+    zip_buf = io.BytesIO()
+    with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for name, data in st.session_state.png_files:
+            zf.writestr(name, data)
+    zip_buf.seek(0)
+    st.download_button(
+        label="📦 批量下载全部 PNG 图片",
+        data=zip_buf,
+        file_name=f"{OUT_PREFIX}_批量_{datetime.now():%Y%m%d_%H%M%S}.zip",
+        mime="application/zip"
+    )
