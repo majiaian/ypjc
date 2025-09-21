@@ -37,6 +37,32 @@ def insert_canvas_image(canvas, page, pos, size=(60, 30)):
         w, h = size
         page.insert_image(fitz.Rect(x, y, x + w, y + h), stream=buf)
 
+def pdf_to_png(pdf_bytes):
+    doc = fitz.open("pdf", pdf_bytes)
+    pages_im = []
+    max_w = 0
+    total_h = 0
+
+    # 1. 逐页转 PIL
+    for pg in doc:
+        pix = pg.get_pixmap()
+        im = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        pages_im.append(im)
+        max_w = max(max_w, im.width)
+        total_h += im.height
+
+    # 2. 拼长图
+    long_img = Image.new("RGB", (max_w, total_h), (255, 255, 255))
+    y = 0
+    for im in pages_im:
+        long_img.paste(im, (0, y))
+        y += im.height
+
+    # 3. 返回字节
+    out = io.BytesIO()
+    long_img.save(out, format="PNG")
+    out.seek(0)
+    return out
 # --------------------------------------------------
 # 页面配置
 st.set_page_config(page_title="药品检查签名工具", layout="centered")
@@ -175,4 +201,5 @@ if st.session_state.get("png_files"):
             mime="image/png",
             key=name  # 避免重复 key
         )
+
 
