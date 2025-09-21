@@ -144,39 +144,25 @@ def build_pdf(dept: str):
     return out
 
 # --------------------------------------------------
-# 下载管理
-if "pdf_files" not in st.session_state:
-    st.session_state.pdf_files = []
-if "pdf_files" not in st.session_state:
-    st.session_state.pdf_files = []
-    
-if st.button("生成 PDF"):
-    pdf_bytes = build_pdf(dept_name)
-    safe_dept = safe_filename(dept_name) or "未命名科室"
-    filename = f"{OUT_PREFIX}_{safe_dept}_{datetime.now():%Y%m%d_%H%M%S}.pdf"
-    st.session_state.pdf_files.append((filename, pdf_bytes.getvalue()))
-    st.success(f"已生成：{filename}")    
-# 生成 PNG 图片
-if st.button("生成 PNG 图片"):
-    if not st.session_state.pdf_files:
-        st.error("请先生成 PDF 文件")
-    else:
-        for pdf_filename, pdf_bytes in st.session_state.pdf_files:
-            png_bytes = pdf_to_png(pdf_bytes)
-            png_filename = pdf_filename.replace(".pdf", ".png")
-            st.session_state.png_files.append((png_filename, png_bytes.getvalue()))
-        st.success("PDF已转换为 PNG 图片")
-        
-# 逐个下载 PNG 图片
-if st.session_state.get("png_files"):
-    st.markdown("---")
-    st.write("📎 点击单独下载每张图片：")
-    for name, data in st.session_state.png_files:
-        st.download_button(
-            label=f"🖼️ {name}",
-            data=data,
-            file_name=name,
-            mime="image/png",
-            key=name  # 避免重复 key
-        )
+# 页面按钮区域
+if st.button("生成图片"):
+    if not dept_name.strip():
+        st.error("请先填写科室名称")
+        st.stop()
 
+    # 1. 先生成 PDF（内存中）
+    pdf_bytes = build_pdf(dept_name)          # 复用原来的函数
+    # 2. 立即转 PNG
+    png_bytes = pdf_to_png(pdf_bytes.getvalue())
+
+    # 3. 构造文件名并弹出下载
+    safe_dept = safe_filename(dept_name) or "未命名科室"
+    png_name = f"{OUT_PREFIX}_{safe_dept}_{datetime.now():%Y%m%d_%H%M%S}.png"
+
+    st.success("图片已生成，请下载")
+    st.download_button(
+        label="📥 下载 PNG 图片",
+        data=png_bytes.getvalue(),
+        file_name=png_name,
+        mime="image/png"
+    )
