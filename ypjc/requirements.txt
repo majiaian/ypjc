@@ -1,5 +1,5 @@
 fitz==0.0.1.dev2
-Pillow==9.2.0
 Pillow==11.3.0
 streamlit==1.24.1
 streamlit_drawable_canvas==0.9.3
+
