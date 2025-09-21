@@ -150,6 +150,12 @@ if "pdf_files" not in st.session_state:
 if "pdf_files" not in st.session_state:
     st.session_state.pdf_files = []
     
+if st.button("生成 PDF"):
+    pdf_bytes = build_pdf(dept_name)
+    safe_dept = safe_filename(dept_name) or "未命名科室"
+    filename = f"{OUT_PREFIX}_{safe_dept}_{datetime.now():%Y%m%d_%H%M%S}.pdf"
+    st.session_state.pdf_files.append((filename, pdf_bytes.getvalue()))
+    st.success(f"已生成：{filename}")    
 # 生成 PNG 图片
 if st.button("生成 PNG 图片"):
     if not st.session_state.pdf_files:
@@ -173,3 +179,4 @@ if st.session_state.get("png_files"):
             mime="image/png",
             key=name  # 避免重复 key
         )
+
