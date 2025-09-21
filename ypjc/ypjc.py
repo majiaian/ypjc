@@ -81,8 +81,8 @@ if st.button("📄 显示检查表"):
 st.subheader("科室（病区）名称")
 dept_name = st.text_input("请输入科室（病区）名称：",key="dept")
 
-st.subheader("扣分理由（文本）")
-deduct_reason = st.text_input("请填写扣分理由：", key="deduct")
+st.subheader("扣分原因")
+deduct_reason = st.text_input("请填写扣分原因：", key="deduct")
 # 3. 手写区域
 st.subheader("护士长姓名")
 canvas_sig1 = st_canvas(stroke_width=4, stroke_color="black", background_color="white",
@@ -92,7 +92,7 @@ st.subheader("检查人员签名")
 canvas_sig2 = st_canvas(stroke_width=4, stroke_color="black", background_color="white",
                         height=120, width=360, drawing_mode="freedraw", key="sig2")
 
-st.subheader("得分及扣分理由")
+st.subheader("得分")
 canvas_score = st_canvas(stroke_width=4, stroke_color="black", background_color="white",
                          height=90, width=270, drawing_mode="freedraw", key="score")
 
@@ -124,14 +124,14 @@ def build_pdf(dept: str, reason: str = ""):
         if "song" not in [f[3] for f in p1.get_fonts(full=False)]:
             p1.insert_font(fontname="song", fontfile=FONT_PATH)
         p1.insert_text((POS_DEPT[0], POS_DEPT[1]), dept, fontname="song", fontsize=12)
-    #扣分理由 
+    #扣分原因 
     if reason:
         if "song" not in [f[3] for f in p2.get_fonts(full=False)]:
             p2.insert_font(fontname="song", fontfile=FONT_PATH)
         x, y = POS_SCORE[0], POS_SCORE[1] + 60
         # 自动换行（宽度 420 pt，行高 18）
         p2.insert_textbox(fitz.Rect(x-100, y, x + 300, y + 80),
-                          deduct_reason,
+                          f"扣分原因：{reason}",
                           fontname="song", fontsize=11, align=0)
     # 插入图像
     insert_canvas_image(canvas_sig1, p2, POS_SIG1)
@@ -166,4 +166,5 @@ if st.button("生成图片"):
         file_name=png_name,
         mime="image/png"
     )
+
 
