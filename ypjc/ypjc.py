@@ -143,6 +143,8 @@ def build_pdf(dept: str):
 # 下载管理
 if "pdf_files" not in st.session_state:
     st.session_state.pdf_files = []
+if "png_files" not in st.session_state:   # 防报错
+    st.session_state.png_files = []
 
 if st.button("生成 PDF"):
     pdf_bytes = build_pdf(dept_name)
@@ -201,5 +203,6 @@ if st.session_state.get("png_files"):
             mime="image/png",
             key=name  # 避免重复 key
         )
+
 
 
