@@ -97,6 +97,7 @@ canvas_score = st_canvas(stroke_width=4, stroke_color="black", background_color=
 
 # --------------------------------------------------
 def build_pdf(dept: str, deduct_reason: str, sig1_data, sig2_data, score_data):
+    DATE_STR = datetime.now().strftime("%Y.%m.%d")
     if not os.path.exists(SRC):
         st.error("模板文件缺失"); st.stop()
     doc = fitz.open(SRC)
@@ -187,4 +188,5 @@ if len(st.session_state.png_files) >= 2:
         file_name=f"{OUT_PREFIX}_批量_{datetime.now():%Y%m%d_%H%M%S}.zip",
         mime="application/zip"
     )
+
 
