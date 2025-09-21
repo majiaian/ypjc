@@ -42,14 +42,13 @@ def insert_canvas_image(canvas, page, pos, size=(60, 30)):
 st.set_page_config(page_title="药品检查签名工具", layout="centered")
 st.title("药品检查签名工具")
 
-# 检查表按钮
-if st.button("显示检查表"):
-    if os.path.exists(NOTICE_MD):
-        with open(NOTICE_MD, "r", encoding="utf-8") as f:
-            st.markdown("### 📄 检查表")
-            st.markdown(f.read())
-    else:
-        st.info("table.md 未找到，已跳过检查表展示。")
+# 1. 内置 Markdown 展示
+if os.path.exists(NOTICE_MD):
+    with open(NOTICE_MD, "r", encoding="utf-8") as f:
+        st.markdown("### 📄 检查表")
+        st.markdown(f.read())
+else:
+    st.info("table.md 未找到，已跳过检查表展示。")
 
 # 2. 科室输入
 st.subheader("科室（病区）名称")
@@ -60,13 +59,13 @@ deduct_reason = st.text_input("请填写扣分理由：", key="deduct")
 # 3. 手写区域
 st.subheader("护士长姓名")
 canvas_sig1 = st_canvas(stroke_width=4, stroke_color="black", background_color="white",
-                        height=120, width=360, drawing_mode="freedraw", key="sig1")
+                        height=90, width=270, drawing_mode="freedraw", key="sig1")
 
 st.subheader("检查人员签名")
 canvas_sig2 = st_canvas(stroke_width=4, stroke_color="black", background_color="white",
-                        height=120, width=360, drawing_mode="freedraw", key="sig2")
+                        height=90, width=270, drawing_mode="freedraw", key="sig2")
 
-st.subheader("得分")
+st.subheader("得分及扣分理由")
 canvas_score = st_canvas(stroke_width=4, stroke_color="black", background_color="white",
                          height=90, width=270, drawing_mode="freedraw", key="score")
 
@@ -110,7 +109,7 @@ def build_pdf(dept: str):
     insert_canvas_image(canvas_score, p2, POS_SCORE, size=(100, 50))
 
     out = io.BytesIO()
-    doc.save(out, deflate=True,garbage=4)
+    doc.save(out, deflate=True)
     out.seek(0)
     return out
 
@@ -152,3 +151,28 @@ if st.session_state.pdf_files:
             file_name=f"{OUT_PREFIX}_批量_{datetime.now():%Y%m%d_%H%M%S}.zip",
             mime="application/zip"
         )
+
+# 生成 PNG 图片
+if st.button("生成 PNG 图片"):
+    if not st.session_state.pdf_files:
+        st.error("请先生成 PDF 文件")
+    else:
+        for pdf_filename, pdf_bytes in st.session_state.pdf_files:
+            png_bytes = pdf_to_png(pdf_bytes)
+            png_filename = pdf_filename.replace(".pdf", ".png")
+            st.session_state.png_files.append((png_filename, png_bytes.getvalue()))
+        st.success("所有 PDF 已转换为 PNG 图片")
+
+# 6. 打包下载全部 PNG 图片
+if st.session_state.png_files:
+    zip_buf = io.BytesIO()
+    with zipfile.ZipFile(zip_buf, "w") as zf:
+        for name, data in st.session_state.png_files:
+            zf.writestr(name, data)
+    zip_buf.seek(0)
+    st.download_button(
+        label="🖼️ 打包下载全部 PNG 图片",
+        data=zip_buf,
+        file_name=f"{OUT_PREFIX}_批量_{datetime.now():%Y%m%d_%H%M%S}.zip",
+        mime="application/zip"
+    )
