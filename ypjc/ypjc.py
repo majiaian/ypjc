@@ -110,7 +110,7 @@ def build_pdf(dept: str):
     insert_canvas_image(canvas_score, p2, POS_SCORE, size=(100, 50))
 
     out = io.BytesIO()
-    doc.save(out, deflate=True)
+    doc.save(out, deflate=True,garbage=4)
     out.seek(0)
     return out
 
