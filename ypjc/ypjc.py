@@ -163,16 +163,16 @@ if st.button("生成 PNG 图片"):
             st.session_state.png_files.append((png_filename, png_bytes.getvalue()))
         st.success("所有 PDF 已转换为 PNG 图片")
 
-# 6. 打包下载全部 PNG 图片
-if st.session_state.png_files:
-    zip_buf = io.BytesIO()
-    with zipfile.ZipFile(zip_buf, "w") as zf:
-        for name, data in st.session_state.png_files:
-            zf.writestr(name, data)
-    zip_buf.seek(0)
-    st.download_button(
-        label="🖼️ 打包下载全部 PNG 图片",
-        data=zip_buf,
-        file_name=f"{OUT_PREFIX}_批量_{datetime.now():%Y%m%d_%H%M%S}.zip",
-        mime="application/zip"
-    )
+# 6. 逐个下载 PNG 图片
+if st.session_state.get("png_files"):
+    st.markdown("---")
+    st.write("📎 点击单独下载每张图片：")
+    for name, data in st.session_state.png_files:
+        st.download_button(
+            label=f"🖼️ {name}",
+            data=data,
+            file_name=name,
+            mime="image/png",
+            key=name  # 避免重复 key
+        )
+
